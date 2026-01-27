@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../widgets/game_status_bar.dart';
+import '../services/voice_service.dart';
 
-class Phase5FraudCheck extends StatelessWidget {
+class Phase5FraudCheck extends StatefulWidget {
   final GameState gameState;
   final Function(bool) onAction;
 
@@ -13,9 +14,43 @@ class Phase5FraudCheck extends StatelessWidget {
   });
 
   @override
+  State<Phase5FraudCheck> createState() => _Phase5FraudCheckState();
+}
+
+class _Phase5FraudCheckState extends State<Phase5FraudCheck> {
+  final VoiceService _voiceService = VoiceService();
+  bool _voicePlayed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playVoice();
+  }
+
+  Future<void> _playVoice() async {
+    if (!_voicePlayed) {
+      await _voiceService.initialize();
+      await _voiceService.speakPhrase('phase5_start');
+      _voicePlayed = true;
+    }
+  }
+
+  void _handleAction(bool sharedOTP) {
+    if (sharedOTP) {
+      _voiceService.speakPhrase('fraud_detected');
+      _voiceService.speakPhrase('wrong_decision');
+      _voiceService.speakPhrase('stress_increased');
+    } else {
+      _voiceService.speakPhrase('fraud_avoided');
+      _voiceService.speakPhrase('good_choice');
+    }
+    widget.onAction(sharedOTP);
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Generate fake OTP
-    final fakeOTP = '394822';
+    const fakeOTP = '394822';
     
     return Scaffold(
       appBar: AppBar(
@@ -26,9 +61,9 @@ class Phase5FraudCheck extends StatelessWidget {
       body: Column(
         children: [
           GameStatusBar(
-            money: gameState.money,
-            stress: gameState.stress,
-            day: gameState.day,
+            money: widget.gameState.money,
+            stress: widget.gameState.stress,
+            day: widget.gameState.day,
           ),
           Expanded(
             child: Padding(
@@ -90,7 +125,7 @@ class Phase5FraudCheck extends StatelessWidget {
                     width: double.infinity,
                     height: 70,
                     child: ElevatedButton.icon(
-                      onPressed: () => onAction(true),
+                      onPressed: () => _handleAction(true),
                       icon: const Icon(Icons.share, size: 28),
                       label: const Text(
                         "Share OTP",
@@ -107,7 +142,7 @@ class Phase5FraudCheck extends StatelessWidget {
                     width: double.infinity,
                     height: 70,
                     child: ElevatedButton.icon(
-                      onPressed: () => onAction(false),
+                      onPressed: () => _handleAction(false),
                       icon: const Icon(Icons.block, size: 28),
                       label: const Text(
                         "Ignore",

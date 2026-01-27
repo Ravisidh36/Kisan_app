@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../utils/language.dart';
 import '../widgets/game_status_bar.dart';
+import '../services/voice_service.dart';
 
-class Phase2FarmInvestment extends StatelessWidget {
+class Phase2FarmInvestment extends StatefulWidget {
   final GameState gameState;
   final Function(bool) onResult;
 
@@ -13,6 +14,39 @@ class Phase2FarmInvestment extends StatelessWidget {
     required this.gameState,
     required this.onResult,
   });
+
+  @override
+  State<Phase2FarmInvestment> createState() => _Phase2FarmInvestmentState();
+}
+
+class _Phase2FarmInvestmentState extends State<Phase2FarmInvestment> {
+  final VoiceService _voiceService = VoiceService();
+  bool _voicePlayed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playVoice();
+  }
+
+  Future<void> _playVoice() async {
+    if (!_voicePlayed) {
+      await _voiceService.initialize();
+      await _voiceService.speakPhrase('phase2_start');
+      _voicePlayed = true;
+    }
+  }
+
+  void _handleBuy() {
+    final random = Random();
+    final quality = random.nextDouble() > 0.3;
+    if (quality) {
+      _voiceService.speakPhrase('good_choice');
+    } else {
+      _voiceService.speakPhrase('wrong_decision');
+    }
+    widget.onResult(quality);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +71,9 @@ class Phase2FarmInvestment extends StatelessWidget {
           child: Column(
             children: [
               GameStatusBar(
-                money: gameState.money,
-                stress: gameState.stress,
-                day: gameState.day,
+                money: widget.gameState.money,
+                stress: widget.gameState.stress,
+                day: widget.gameState.day,
               ),
               Expanded(
                 child: Padding(
@@ -84,12 +118,7 @@ class Phase2FarmInvestment extends StatelessWidget {
                   width: double.infinity,
                   height: 80,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      // Random quality: 70% good, 30% faulty
-                      final random = Random();
-                      final quality = random.nextDouble() > 0.3;
-                      onResult(quality);
-                    },
+                    onPressed: _handleBuy,
                     icon: const Icon(Icons.shopping_cart, size: 35),
                     label: Text(
                       Language.translate('buy'),

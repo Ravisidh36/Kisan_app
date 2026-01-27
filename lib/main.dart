@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
-import 'models/game_state.dart';
-import 'utils/language.dart';
 
 void main() {
   runApp(const KisanLifeSimulator());

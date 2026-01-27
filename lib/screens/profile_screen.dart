@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
-import '../utils/language.dart';
 import '../widgets/game_status_bar.dart';
 
 class ProfileScreen extends StatelessWidget {

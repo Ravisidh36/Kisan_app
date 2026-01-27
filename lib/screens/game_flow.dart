@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:flutter/material.dart';
 import '../models/game_state.dart';
-import '../utils/language.dart';
-import '../widgets/game_status_bar.dart';
 import 'phase1_personal_decision.dart';
 import 'phase2_farm_investment.dart';
 import 'phase3_faulty_product.dart';
@@ -34,45 +32,48 @@ class _GameFlowState extends State<GameFlow> {
   void _handlePhase1Decision(String decision) {
     gameState.personalDecision = decision;
     
+    // NO MONEY SHOULD CHANGE HERE - only set flags
     if (decision == 'save') {
       gameState.saved = true;
-      // Savings: Money is already owned, just mark as saved (no deduction)
+      gameState.stress -= 5; // Good decision → -5 stress
+      if (gameState.stress < 0) gameState.stress = 0;
       gameState.goodDecisions.add('Saved ₹20,000');
-      gameState.addHistory('Saved ₹20,000 (money still available)');
+      gameState.addHistory('Day 1: Decided to save ₹20,000 - stress -5');
     } else if (decision == 'invest') {
       gameState.invested = true;
-      gameState.money -= 20000; // Investment: money temporarily removed
-      gameState.addHistory('Invested ₹20,000 in farm');
-    } else {
-      gameState.spent = true;
-      gameState.money -= 20000; // Personal expense: money spent
+      gameState.addHistory('Day 1: Decided to invest ₹20,000');
+    } else if (decision == 'expense') {
+      gameState.personalSpent = true;
       gameState.badDecisions.add('Spent ₹20,000 on personal expense');
-      gameState.addHistory('Spent ₹20,000 on personal expense');
+      gameState.addHistory('Day 1: Decided to spend ₹20,000 on personal expense');
     }
     
-    // Day progression: Phase 1 → Day 1, Phase 2 → Day 3
+    // Day progression: Phase 1 → Day 1
     gameState.day = 1;
-    gameState.addHistory('Day 1 completed');
     _moveToPhase(2);
   }
 
   void _handlePhase2Result(bool quality) {
+    // DO NOT change money yet - only store result
     gameState.investmentQuality = quality;
-    gameState.money -= 30000; // Farm investment: ₹30,000
     
     if (quality) {
-      gameState.addHistory('Bought quality farm supplies - ₹30,000');
+      gameState.addHistory('Day 3: Bought quality farm supplies');
     } else {
-      gameState.addHistory('Bought faulty farm supplies - ₹30,000');
+      gameState.addHistory('Day 3: Bought faulty farm supplies');
     }
     
     // Day progression: Phase 2 → Day 3
     gameState.day = 3;
-    gameState.addHistory('Day 3: Farm investment made');
     
     if (!quality) {
       _moveToPhase(3);
     } else {
+      // Generate lean period event when entering Phase 4
+      if (gameState.leanPeriodEvent == null) {
+        final events = ["hailstorm", "medical", "pesticide"];
+        gameState.leanPeriodEvent = events[Random().nextInt(3)];
+      }
       _moveToPhase(4);
     }
   }
@@ -80,24 +81,29 @@ class _GameFlowState extends State<GameFlow> {
   void _handlePhase3Action(String action) {
     gameState.faultyProductAction = action;
     
+    // Stress rules: Complaint → -10 stress, others increase stress
     if (action == 'ignore') {
       gameState.stress += 20;
       gameState.badDecisions.add('Ignored faulty product');
-      gameState.addHistory('Ignored faulty product - stress +20');
+      gameState.addHistory('Day 5: Ignored faulty product - stress +20');
     } else if (action == 'fight') {
       gameState.stress += 25;
       gameState.badDecisions.add('Fought angrily');
-      gameState.addHistory('Fought angrily - stress +25');
-    } else {
+      gameState.addHistory('Day 5: Fought angrily - stress +25');
+    } else if (action == 'complaint') {
       gameState.stress -= 10;
       if (gameState.stress < 0) gameState.stress = 0;
       gameState.goodDecisions.add('Registered complaint');
-      gameState.addHistory('Registered complaint - product replaced, stress -10');
+      gameState.addHistory('Day 5: Registered complaint - stress -10');
     }
     
     // Day progression: Phase 3 → Day 5
     gameState.day = 5;
-    gameState.addHistory('Day 5: Product issue resolved');
+    // Generate lean period event when entering Phase 4
+    if (gameState.leanPeriodEvent == null) {
+      final events = ["hailstorm", "medical", "pesticide"];
+      gameState.leanPeriodEvent = events[Random().nextInt(3)];
+    }
     _moveToPhase(4);
   }
 
@@ -105,63 +111,67 @@ class _GameFlowState extends State<GameFlow> {
     gameState.leanPeriodEvent = event;
     gameState.leanPeriodAction = action;
     
+    // DO NOT change money here - only set flags
     if (event == 'hailstorm' && action == 'subsidy') {
-      gameState.money += 10000; // Subsidy adds money
+      gameState.subsidyApplied = true;
+      gameState.stress -= 5; // Good decision → -5 stress
+      if (gameState.stress < 0) gameState.stress = 0;
       gameState.goodDecisions.add('Applied for subsidy');
-      gameState.addHistory('Applied for subsidy - received ₹10,000');
+      gameState.addHistory('Day 7: Applied for subsidy (₹10,000 will be added at harvest) - stress -5');
     } else if (action == 'loan') {
       gameState.tookLoan = true;
       gameState.loanAmount = 20000;
-      gameState.money += 20000; // Loan adds money
-      gameState.stress += 15; // Loan increases stress
+      gameState.stress += 20; // Loan → +20 stress (instant update)
       gameState.badDecisions.add('Took loan of ₹20,000');
-      gameState.addHistory('Took loan of ₹20,000 - stress +15');
+      gameState.addHistory('Day 7: Took loan of ₹20,000 - stress +20');
     } else if (action == 'savings') {
       if (gameState.saved) {
-        // Using savings: spending the saved money
-        gameState.money -= 20000;
+        gameState.savingsUsed = true;
+        gameState.stress -= 5; // Good decision → -5 stress
+        if (gameState.stress < 0) gameState.stress = 0;
         gameState.goodDecisions.add('Used savings');
-        gameState.addHistory('Used savings - spent ₹20,000');
+        gameState.addHistory('Day 7: Used savings (₹20,000 will be available at harvest) - stress -5');
       } else {
         gameState.badDecisions.add('No savings available');
-        gameState.addHistory('Tried to use savings but had none');
+        gameState.addHistory('Day 7: Tried to use savings but had none');
       }
     } else if (action == 'withdraw') {
       if (gameState.invested) {
-        gameState.money += 15000; // Early withdrawal: partial return
-        gameState.badDecisions.add('Withdrew investment early');
-        gameState.addHistory('Withdrew investment early - got ₹15,000');
+        gameState.investmentWithdrawn = true;
+        // Withdraw investment - profit/loss will be calculated at harvest
+        gameState.addHistory('Day 7: Withdrew investment (returns calculated at harvest)');
       }
     }
     
     // Stress increase for medical/pesticide emergencies
     if (event == 'medical' || event == 'pesticide') {
       gameState.stress += 20;
-      gameState.addHistory('Emergency situation - stress +20');
+      gameState.addHistory('Day 7: Emergency situation - stress +20');
     }
     
     // Day progression: Phase 4 → Day 7
     gameState.day = 7;
-    gameState.addHistory('Day 7: Emergency handled');
     _moveToPhase(5);
   }
 
   void _handlePhase5Action(bool sharedOTP) {
     gameState.fraudAction = sharedOTP;
     
+    // DO NOT DEDUCT MONEY HERE - only set flag
     if (sharedOTP) {
       gameState.fraudPending = true;
-      gameState.stress += 30; // Fraud increases stress significantly
+      gameState.stress += 30; // Fraud → +30 stress (instant update)
       gameState.badDecisions.add('Shared OTP - fraud pending');
-      gameState.addHistory('Shared OTP - fraud detected, stress +30');
+      gameState.addHistory('Day 9: Shared OTP - fraud detected, stress +30');
     } else {
+      gameState.stress -= 5; // Good decision → -5 stress
+      if (gameState.stress < 0) gameState.stress = 0;
       gameState.goodDecisions.add('Avoided fraud');
-      gameState.addHistory('Ignored suspicious message - avoided fraud');
+      gameState.addHistory('Day 9: Ignored suspicious message - avoided fraud - stress -5');
     }
     
     // Day progression: Phase 5 → Day 9
     gameState.day = 9;
-    gameState.addHistory('Day 9: Security check completed');
     _moveToPhase(6);
   }
 
@@ -169,55 +179,66 @@ class _GameFlowState extends State<GameFlow> {
     // Day progression: Phase 6 → Day 15 (Harvest Day)
     gameState.day = 15;
     
-    // Apply pending fraud if any (delayed impact)
+    // HARVEST PHASE: ONLY PLACE WHERE MONEY CHANGES
+    // Apply all effects TOGETHER
+    
+    int moneyChange = 0;
+    int baseHarvest = 50000;
+    
+    // 1. IF fraudPending → money = 0
     if (gameState.fraudPending) {
       gameState.money = 0;
       gameState.addHistory('Day 15: Fraud impact - All money lost!');
+      gameState.harvestAmount = 0;
+      _moveToPhase(7);
+      return;
     }
     
-    // Calculate harvest based on investment quality and stress
-    int harvest = 0;
-    int baseHarvest = 50000;
-    
-    // If invested, calculate return based on quality
-    if (gameState.invested) {
+    // 2. IF invested AND NOT withdrawn: profit → +22000, loss → +18000
+    if (gameState.invested && !gameState.investmentWithdrawn) {
       if (gameState.investmentQuality == true) {
-        // Good quality: profit
-        harvest = baseHarvest + 22000; // ₹20,000 investment + ₹2,000 profit
-        gameState.addHistory('Day 15: Good harvest from quality investment - ₹$harvest');
+        // Profit: +22000
+        moneyChange += 22000;
+        gameState.addHistory('Day 15: Investment profit - +₹22,000');
       } else {
-        // Faulty product: check how it was handled
-        if (gameState.faultyProductAction == 'complaint') {
-          harvest = baseHarvest + 18000; // ₹20,000 - ₹2,000 loss (complaint helped)
-          gameState.addHistory('Day 15: Harvest with complaint resolution - ₹$harvest');
-        } else {
-          harvest = baseHarvest + 15000; // ₹20,000 - ₹5,000 loss (ignored/fought)
-          gameState.addHistory('Day 15: Poor harvest due to faulty product - ₹$harvest');
-        }
+        // Loss: +18000
+        moneyChange += 18000;
+        gameState.addHistory('Day 15: Investment loss - +₹18,000');
       }
-    } else {
-      // No investment: base harvest only
-      harvest = baseHarvest;
-      gameState.addHistory('Day 15: Basic harvest - ₹$harvest');
+    } else if (gameState.investmentWithdrawn) {
+      // Early withdrawal: partial return based on quality
+      if (gameState.investmentQuality == true) {
+        moneyChange += 15000; // Early withdrawal with profit
+        gameState.addHistory('Day 15: Early investment withdrawal - +₹15,000');
+      } else {
+        moneyChange += 12000; // Early withdrawal with loss
+        gameState.addHistory('Day 15: Early investment withdrawal - +₹12,000');
+      }
     }
     
-    // Stress affects harvest (high stress = lower yield)
-    if (gameState.stress >= 70) {
-      harvest = (harvest * 0.9).round(); // 10% reduction
-      gameState.addHistory('High stress reduced harvest by 10%');
-    } else if (gameState.stress < 50) {
-      harvest = (harvest * 1.1).round(); // 10% bonus
-      gameState.addHistory('Low stress increased harvest by 10%');
+    // 3. IF subsidyApplied → +10000
+    if (gameState.subsidyApplied) {
+      moneyChange += 10000;
+      gameState.addHistory('Day 15: Subsidy received - +₹10,000');
     }
     
+    // 4. IF savingsUsed → +20000 (savings available for use)
+    if (gameState.savingsUsed) {
+      moneyChange += 20000;
+      gameState.addHistory('Day 15: Savings used - +₹20,000');
+    }
+    
+    // Base harvest
+    int harvest = baseHarvest + moneyChange;
     gameState.harvestAmount = harvest;
     gameState.money += harvest;
+    gameState.addHistory('Day 15: Harvest complete - Total: ₹$harvest');
     
-    // Deduct loan if taken (with interest)
+    // 5. IF loanTaken: Deduct loan + 10% interest
     if (gameState.tookLoan) {
       int totalLoan = gameState.loanAmount + (gameState.loanAmount * gameState.loanInterest ~/ 100);
       gameState.money -= totalLoan;
-      gameState.addHistory('Loan repaid with interest - ₹$totalLoan deducted');
+      gameState.addHistory('Day 15: Loan repaid with interest - ₹$totalLoan deducted');
     }
     
     _moveToPhase(7);

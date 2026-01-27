@@ -6,7 +6,7 @@ class GameState {
   // Decisions
   bool invested;
   bool saved;
-  bool spent;
+  bool personalSpent; // Personal expense decision
 
   // Loan
   bool tookLoan;
@@ -22,6 +22,9 @@ class GameState {
   String? leanPeriodAction;
   bool? fraudAction;
   bool fraudPending; // Fraud will impact in next phase
+  bool subsidyApplied; // Subsidy applied for hailstorm
+  bool savingsUsed; // Savings used during lean period
+  bool investmentWithdrawn; // Investment withdrawn early
 
   // Outcome
   int harvestAmount;
@@ -39,7 +42,7 @@ class GameState {
     this.day = 1,
     this.invested = false,
     this.saved = false,
-    this.spent = false,
+    this.personalSpent = false,
     this.tookLoan = false,
     this.loanAmount = 0,
     this.loanInterest = 10,
@@ -51,6 +54,9 @@ class GameState {
     this.leanPeriodAction,
     this.fraudAction,
     this.fraudPending = false,
+    this.subsidyApplied = false,
+    this.savingsUsed = false,
+    this.investmentWithdrawn = false,
     this.harvestAmount = 0,
     List<String>? eventHistory,
     List<int>? moneyHistory,
@@ -69,7 +75,7 @@ class GameState {
     day = 1;
     invested = false;
     saved = false;
-    spent = false;
+    personalSpent = false;
     tookLoan = false;
     loanAmount = 0;
     loanInterest = 10;
@@ -81,6 +87,9 @@ class GameState {
     leanPeriodAction = null;
     fraudAction = null;
     fraudPending = false;
+    subsidyApplied = false;
+    savingsUsed = false;
+    investmentWithdrawn = false;
     harvestAmount = 0;
     eventHistory.clear();
     moneyHistory.clear();
@@ -107,7 +116,7 @@ class GameState {
     int? day,
     bool? invested,
     bool? saved,
-    bool? spent,
+    bool? personalSpent,
     bool? tookLoan,
     int? loanAmount,
     int? loanInterest,
@@ -118,6 +127,10 @@ class GameState {
     String? leanPeriodEvent,
     String? leanPeriodAction,
     bool? fraudAction,
+    bool? fraudPending,
+    bool? subsidyApplied,
+    bool? savingsUsed,
+    bool? investmentWithdrawn,
     int? harvestAmount,
   }) {
     return GameState(
@@ -126,7 +139,7 @@ class GameState {
       day: day ?? this.day,
       invested: invested ?? this.invested,
       saved: saved ?? this.saved,
-      spent: spent ?? this.spent,
+      personalSpent: personalSpent ?? this.personalSpent,
       tookLoan: tookLoan ?? this.tookLoan,
       loanAmount: loanAmount ?? this.loanAmount,
       loanInterest: loanInterest ?? this.loanInterest,
@@ -138,6 +151,10 @@ class GameState {
       leanPeriodEvent: leanPeriodEvent ?? this.leanPeriodEvent,
       leanPeriodAction: leanPeriodAction ?? this.leanPeriodAction,
       fraudAction: fraudAction ?? this.fraudAction,
+      fraudPending: fraudPending ?? this.fraudPending,
+      subsidyApplied: subsidyApplied ?? this.subsidyApplied,
+      savingsUsed: savingsUsed ?? this.savingsUsed,
+      investmentWithdrawn: investmentWithdrawn ?? this.investmentWithdrawn,
       harvestAmount: harvestAmount ?? this.harvestAmount,
       goodDecisions: List.from(goodDecisions),
       badDecisions: List.from(badDecisions),

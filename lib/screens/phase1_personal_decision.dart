@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../utils/language.dart';
 import '../widgets/game_status_bar.dart';
+import '../services/voice_service.dart';
 
-class Phase1PersonalDecision extends StatelessWidget {
+class Phase1PersonalDecision extends StatefulWidget {
   final GameState gameState;
   final Function(String) onDecision;
 
@@ -12,6 +13,42 @@ class Phase1PersonalDecision extends StatelessWidget {
     required this.gameState,
     required this.onDecision,
   });
+
+  @override
+  State<Phase1PersonalDecision> createState() => _Phase1PersonalDecisionState();
+}
+
+class _Phase1PersonalDecisionState extends State<Phase1PersonalDecision> {
+  final VoiceService _voiceService = VoiceService();
+  bool _voicePlayed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playVoice();
+  }
+
+  Future<void> _playVoice() async {
+    if (!_voicePlayed) {
+      await _voiceService.initialize();
+      await _voiceService.speakPhrase('phase1_start');
+      _voicePlayed = true;
+    }
+  }
+
+  void _handleDecision(String decision) {
+    // Voice feedback
+    if (decision == 'save') {
+      _voiceService.speakPhrase('saved_money');
+      _voiceService.speakPhrase('good_choice');
+    } else if (decision == 'invest') {
+      _voiceService.speakPhrase('invested_money');
+    } else {
+      _voiceService.speakPhrase('spent_money');
+      _voiceService.speakPhrase('wrong_decision');
+    }
+    widget.onDecision(decision);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +74,9 @@ class Phase1PersonalDecision extends StatelessWidget {
             children: [
               // Game Status Bar
               GameStatusBar(
-                money: gameState.money,
-                stress: gameState.stress,
-                day: gameState.day,
+                money: widget.gameState.money,
+                stress: widget.gameState.stress,
+                day: widget.gameState.day,
               ),
               // Main Content
               Expanded(
@@ -68,7 +105,7 @@ class Phase1PersonalDecision extends StatelessWidget {
                   Language.translate('save'),
                   Icons.savings,
                   Colors.blue,
-                  () => onDecision('save'),
+                  () => _handleDecision('save'),
                 ),
                 const SizedBox(height: 20),
                 _buildLargeButton(
@@ -76,7 +113,7 @@ class Phase1PersonalDecision extends StatelessWidget {
                   Language.translate('invest'),
                   Icons.trending_up,
                   Colors.orange,
-                  () => onDecision('invest'),
+                  () => _handleDecision('invest'),
                 ),
                 const SizedBox(height: 20),
                 _buildLargeButton(
@@ -84,7 +121,7 @@ class Phase1PersonalDecision extends StatelessWidget {
                   Language.translate('personal_expense'),
                   Icons.shopping_cart,
                   Colors.red,
-                  () => onDecision('expense'),
+                  () => _handleDecision('expense'),
                 ),
                     ],
                   ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
-import '../utils/language.dart';
 import '../widgets/game_status_bar.dart';
+import '../services/voice_service.dart';
 
-class Phase3FaultyProduct extends StatelessWidget {
+class Phase3FaultyProduct extends StatefulWidget {
   final GameState gameState;
   final Function(String) onAction;
 
@@ -12,6 +12,39 @@ class Phase3FaultyProduct extends StatelessWidget {
     required this.gameState,
     required this.onAction,
   });
+
+  @override
+  State<Phase3FaultyProduct> createState() => _Phase3FaultyProductState();
+}
+
+class _Phase3FaultyProductState extends State<Phase3FaultyProduct> {
+  final VoiceService _voiceService = VoiceService();
+  bool _voicePlayed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playVoice();
+  }
+
+  Future<void> _playVoice() async {
+    if (!_voicePlayed) {
+      await _voiceService.initialize();
+      await _voiceService.speakPhrase('phase3_start');
+      _voicePlayed = true;
+    }
+  }
+
+  void _handleAction(String action) {
+    if (action == 'complaint') {
+      _voiceService.speakPhrase('complaint_registered');
+      _voiceService.speakPhrase('good_choice');
+    } else {
+      _voiceService.speakPhrase('wrong_decision');
+      _voiceService.speakPhrase('stress_increased');
+    }
+    widget.onAction(action);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +56,9 @@ class Phase3FaultyProduct extends StatelessWidget {
       body: Column(
         children: [
           GameStatusBar(
-            money: gameState.money,
-            stress: gameState.stress,
-            day: gameState.day,
+            money: widget.gameState.money,
+            stress: widget.gameState.stress,
+            day: widget.gameState.day,
           ),
           Expanded(
             child: Column(
@@ -43,19 +76,19 @@ class Phase3FaultyProduct extends StatelessWidget {
           const SizedBox(height: 40),
 
           _button("Ignore", Colors.grey, () {
-            onAction("ignore");
+            _handleAction("ignore");
           }),
 
           const SizedBox(height: 15),
 
           _button("Fight angrily", Colors.red, () {
-            onAction("fight");
+            _handleAction("fight");
           }),
 
           const SizedBox(height: 15),
 
           _button("Register Complaint", Colors.green, () {
-            onAction("complaint");
+            _handleAction("complaint");
           }),
               ],
             ),

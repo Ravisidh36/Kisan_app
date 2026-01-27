@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../utils/language.dart';
 import '../widgets/game_status_bar.dart';
+import '../services/voice_service.dart';
 
 class Phase6Harvest extends StatefulWidget {
   final GameState gameState;
@@ -18,6 +19,30 @@ class Phase6Harvest extends StatefulWidget {
 }
 
 class _Phase6HarvestState extends State<Phase6Harvest> {
+  final VoiceService _voiceService = VoiceService();
+  bool _voicePlayed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playVoice();
+  }
+
+  Future<void> _playVoice() async {
+    if (!_voicePlayed) {
+      await _voiceService.initialize();
+      await _voiceService.speakPhrase('phase6_start');
+      if (widget.gameState.fraudPending) {
+        await Future.delayed(const Duration(seconds: 2));
+        _voiceService.speakPhrase('fraud_detected');
+        _voiceService.speakPhrase('wrong_decision');
+      } else if (widget.gameState.harvestAmount > 0) {
+        await Future.delayed(const Duration(seconds: 2));
+        _voiceService.speakPhrase('money_added');
+      }
+      _voicePlayed = true;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,9 +143,9 @@ class _Phase6HarvestState extends State<Phase6Harvest> {
                         color: Colors.green,
                       ),
                       const SizedBox(height: 15),
-                      Text(
+                      const Text(
                         'Harvest Complete!',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.green,
