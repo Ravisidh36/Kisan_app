@@ -1,16 +1,46 @@
 import 'package:flutter/material.dart';
-import 'game_flow.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/theme/app_theme.dart';
+import '../core/widgets/common_widgets.dart';
+import '../providers/game_state_provider.dart';
+import '../services/voice_service.dart';
+import 'season_intro_screen.dart';
 import 'how_to_play_screen.dart';
-import '../utils/language.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late VoiceService _voiceService;
+  bool _voiceEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _voiceService = VoiceService();
+    _initializeVoice();
+  }
+
+  Future<void> _initializeVoice() async {
+    await _voiceService.initialize();
+    if (mounted && _voiceEnabled) {
+      await _voiceService.speak(_voiceService.getHomeScreenGreeting());
+    }
+  }
+
+  void _startNewSeason() {
+    // Reset game state and navigate to season intro
+    ref.read(gameStateProvider.notifier).resetSeason();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SeasonIntroScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,8 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.green.shade100,
               Colors.green.shade50,
+              Colors.green.shade100,
             ],
           ),
         ),
@@ -31,126 +61,121 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.agriculture,
-                  size: 100,
-                  color: Colors.green,
-                ),
-                const SizedBox(height: 30),
-                Text(
-                  Language.translate('app_title'),
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                // App Icon
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
                   ),
+                  child: const Icon(
+                    Icons.agriculture,
+                    size: 100,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // App Title
+                Text(
+                  'KisanPath',
+                  style: Theme.of(context).textTheme.displayLarge!.copyWith(
+                        color: AppTheme.primaryGreen,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Farm Life Simulator',
+                  style: Theme.of(context).textTheme.headlineSmall!.copyWith(
+                        color: AppTheme.lightText,
+                        fontWeight: FontWeight.w400,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 60),
-                _buildLargeButton(
-                  context,
-                  Language.translate('start_game'),
-                  Icons.play_arrow,
-                  Colors.green,
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GameFlow(),
+
+                // Start Game Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _startNewSeason,
+                    icon: const Icon(Icons.play_arrow, size: 28),
+                    label: const Text('Start New Season'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 20),
-                _buildLargeButton(
-                  context,
-                  Language.translate('how_to_play'),
-                  Icons.help_outline,
-                  Colors.blue,
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HowToPlayScreen(),
+                const SizedBox(height: 16),
+
+                // How to Play Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HowToPlayScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.help_outline),
+                    label: const Text('How to Play'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryGreen,
+                      side: const BorderSide(
+                        color: AppTheme.primaryGreen,
+                        width: 2,
                       ),
-                    );
-                  },
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 20),
-                _buildLargeButton(
-                  context,
-                  Language.translate('change_language'),
-                  Icons.language,
-                  Colors.orange,
-                  () {
-                    _showLanguageDialog(context);
-                  },
+                const Spacer(),
+
+                // Voice Toggle
+                Card(
+                  elevation: 0,
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Voice Guidance',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        Switch(
+                          value: _voiceEnabled,
+                          onChanged: (value) {
+                            setState(() {
+                              _voiceEnabled = value;
+                              _voiceService.setVoiceEnabled(value);
+                            });
+                          },
+                          activeColor: AppTheme.primaryGreen,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLargeButton(
-    BuildContext context,
-    String text,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return SizedBox(
-      width: double.infinity,
-      height: 70,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 30),
-        label: Text(
-          text,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showLanguageDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(Language.translate('change_language')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: const Text('English'),
-              onTap: () {
-                setState(() {
-                  Language.setLanguage('en');
-                });
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: const Text('हिंदी'),
-              onTap: () {
-                setState(() {
-                  Language.setLanguage('hi');
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
         ),
       ),
     );
